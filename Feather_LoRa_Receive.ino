@@ -1,5 +1,5 @@
 //Feather M0 w/ LoRa
-//Heavily based off Adafruit example for Testing
+//Partially based off of several code examples online
 
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -21,6 +21,7 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 volatile uint32_t idNum;
 char message[50];
 String bleh;
+String ident;
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -54,6 +55,7 @@ void setup() {
 
   //Get identity
   chipId();
+  //Conversion of numId to String crashes Feather and its Bootloader
 }
 
 void loop() {
@@ -64,7 +66,7 @@ void loop() {
     if (rf95.recv(buf, &len)) {
       //Message is available
       digitalWrite(LED, HIGH);
-      RH_RF95::printBuffer("Received: ", buf, len);
+      //RH_RF95::printBuffer("Received: ", buf, len);
       Serial.print("Got: "); Serial.println((char*)buf);
       Serial.print("RSSI: "); Serial.println(rf95.lastRssi(), DEC);
 
@@ -76,7 +78,7 @@ void loop() {
       Serial.println(datum);
       
       //Is message for me?
-      if (recvID == "ff04281c") {
+      if (recvID == "ff04281c") { //Remove hardcoded ID when the above crash is solved.
         Serial.println("Is for me");
 
         //Decide what to do with message
