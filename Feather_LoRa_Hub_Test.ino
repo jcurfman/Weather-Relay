@@ -110,12 +110,60 @@ void loop() {
     int str_len = stationId.length() + 1;
     char blah[str_len];
     stationId.toCharArray(blah, str_len);
-    sprintf(message, "%s,Acknowledged", blah);
+    /**sprintf(message, "%s,Acknowledged", blah);
     Serial.println(message);
 
     rf95.send((uint8_t *) message, sizeof(message));
     rf95.waitPacketSent();
+    Serial.println("Sent a reply"); */
+    //Request dummy data
+    sprintf(message, "%s,Info", blah);
+    Serial.println(message);
+    rf95.send((uint8_t *) message, sizeof(message));
+    rf95.waitPacketSent();
     Serial.println("Sent a reply");
+
+    //Listen for return message with data
+    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);
+    Serial.println("Waiting for reply...");
+    if (rf95.waitAvailableTimeout(1000)) {
+      //Should be reply message?
+      if (rf95.recv(buf, &len)) {
+        Serial.print("RSSI: ");
+        Serial.println(rf95.lastRssi(), DEC);
+
+        String returnMessage = (char*)buf;
+        String recvID = getValue(returnMessage, ',', 0);
+        Serial.println(recvID);
+        String info = getValue(returnMessage, ',', 1);
+        Serial.println(info);
+        String datum = getValue(returnMessage, ',', 2);
+        Serial.println(datum);
+      }
+      else {
+        Serial.println("Receive failed");
+      }
+      delay(5000);
+    }
   }
+}
+
+String getValue(String data, char separator, int index)
+{
+  
+  int found = 0;
+  int strIndex[] = {0, -1};
+  int maxIndex = data.length()-1;
+
+  for(int i=0; i<=maxIndex && found<=index; i++){
+    if(data.charAt(i)==separator || i==maxIndex){
+        found++;
+        strIndex[0] = strIndex[1]+1;
+        strIndex[1] = (i == maxIndex) ? i+1 : i;
+    }
+  }
+
+  return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
