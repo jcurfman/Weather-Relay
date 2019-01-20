@@ -30,6 +30,11 @@ void setup() {
 
   Serial.begin(115200);
   delay(100);
+
+  while (!Serial) {
+    delay(1);
+  }
+  
   Serial.println("Feather LoRa RX Test");
 
   //reset
@@ -54,11 +59,13 @@ void setup() {
   rf95.setTxPower(23, false);
 
   //Get identity
-  chipId();
-  //Conversion of numId to String crashes Feather and its Bootloader
+  chipId(2);
+  chipId(1);
+  Serial.println(ident);
 }
 
 void loop() {
+  digitalWrite(LED, LOW);
   if (rf95.available()) {
     //If radio is operational
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -78,13 +85,14 @@ void loop() {
       Serial.println(datum);
       
       //Is message for me?
-      if (recvID == "ff04281c") { //Remove hardcoded ID when the above crash is solved.
+      if (recvID == ident) { //Remove hardcoded ID when the above crash is solved.
         Serial.println("Is for me");
 
         //Decide what to do with message
         if (datum == "Acknowledged") {
           //Acknowledgement of ID
           Serial.println("Received acknowledgement, no reply");
+          delay(500);
           digitalWrite(LED, LOW);
         }
         else {
@@ -104,7 +112,7 @@ void loop() {
   }
 }
 
-void chipId() {
+void chipId(int option) {
   //Assembles the SAMD processor chip ID value
   volatile uint32_t val1, val2, val3, val4;
   volatile uint32_t *ptr1 = (volatile uint32_t *)0x0080A00C;
@@ -115,13 +123,22 @@ void chipId() {
   val3 = *ptr;
   ptr++;
   val4 = *ptr;
-  
-  //Prints the full chip ID if following block is uncommented; otherwise just outputs last values.
-  /** Serial.print("chip id: 0x");
-  char buf[33];
-  sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
-  Serial.println(buf); */
-  idNum = val4;
+
+  if (option == 1) {
+    //Prints full processor ID
+    //Serial.print("chip id: 0x");
+    char buf[33];
+    char bleh[12];
+    sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
+    sprintf(bleh, "%8x", val4);
+    //Serial.println(buf); 
+    //Serial.println(bleh);
+    ident = bleh;
+  }
+  else if (option == 2) {
+    //assigns end of value to variable idNum
+    idNum = val4;
+  }
 }
 
 String getValue(String data, char separator, int index)
