@@ -61,7 +61,7 @@ void setup() {
   //Get identity
   chipId(2);
   chipId(1);
-  Serial.println(ident);
+  //Serial.println(ident);
 }
 
 void loop() {
@@ -95,6 +95,18 @@ void loop() {
           delay(500);
           digitalWrite(LED, LOW);
         }
+        else if (datum == "Info") {
+          //Dummy data requested. Generate and send.
+          int hehehe = random(40,1200);
+          float randData = hehehe / 10.0;
+          Serial.println(randData);
+          sprintf(message, "%8x,Info,%d", idNum, hehehe);
+          Serial.println(message);
+          rf95.send((uint8_t *) message, sizeof(message));
+          rf95.waitPacketSent();
+          Serial.println("Sent data reply");
+          digitalWrite(LED, LOW);
+        }
         else {
           Serial.println("Unhandled Exception");
         }
@@ -125,11 +137,11 @@ void chipId(int option) {
   val4 = *ptr;
 
   if (option == 1) {
-    //Prints full processor ID
+    //Prints full processor ID OR assigns end of value to String ident.
     //Serial.print("chip id: 0x");
     char buf[33];
     char bleh[12];
-    sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
+    //sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
     sprintf(bleh, "%8x", val4);
     //Serial.println(buf); 
     //Serial.println(bleh);
