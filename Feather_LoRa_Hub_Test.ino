@@ -32,10 +32,13 @@ class Station {
   public: Station(String id) {
     identifier = id;
   }
-
+  
   void addData(float datum) {
     //Adds a dummy datapoint
     randData = datum; 
+  }
+  String ident() {
+    return identifier;
   }
 };
 
@@ -98,6 +101,7 @@ void loop() {
         Serial.println(stationId);
         
         haveStation = true;
+        Station alpha(stationId); //HAVING PROBLEMS WITH CLASS SETUP HERE VERSUS LATER
       }
       else {
         Serial.println("Receive failed");
@@ -116,6 +120,7 @@ void loop() {
     rf95.send((uint8_t *) message, sizeof(message));
     rf95.waitPacketSent();
     Serial.println("Sent a reply"); */
+    
     //Request dummy data
     sprintf(message, "%s,Info", blah);
     Serial.println(message);
@@ -140,6 +145,9 @@ void loop() {
         Serial.println(info);
         String datum = getValue(returnMessage, ',', 2);
         Serial.println(datum);
+
+        Station alpha(recvID); //HAVING PROBLEMS WITH CLASS SETUP HERE VERSUS EARLIER
+        alpha.addData(datum.toInt());
       }
       else {
         Serial.println("Receive failed");
