@@ -90,9 +90,9 @@ void loop() {
 
         //Decide what to do with message
         if (datum == "Acknowledged") {
-          //Acknowledgement of ID
+          //Acknowledgement of ID- uncomment delay if range testing for better LED visibility
           Serial.println("Received acknowledgement, no reply");
-          delay(500);
+          //delay(500);
           digitalWrite(LED, LOW);
         }
         else if (datum == "Info") {
@@ -118,6 +118,15 @@ void loop() {
         rf95.send((uint8_t *) message, sizeof(message));
         rf95.waitPacketSent();
         Serial.println("Sent a reply");
+        digitalWrite(LED, LOW);
+      }
+      else {
+        //If message is for another station, rebroadcast once. 
+        int waitTime = random(100, 2000);
+        delay(waitTime);
+        rf95.send(buf, sizeof(buf));
+        rf95.waitPacketSent();
+        Serial.print("Forwarded message after delay of "); Serial.print(waitTime); Serial.println("ms");
         digitalWrite(LED, LOW);
       }
     }
