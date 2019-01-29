@@ -3,6 +3,7 @@
 
 #include <SPI.h>
 #include <RH_RF95.h>
+#include <Adafruit_AM2315.h>
 
 //Radio Setup for Feather M0
 #define RFM95_CS 8
@@ -14,6 +15,14 @@
 
 //Radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
+
+//Adafruit AM2315 sensor- temp and humidity
+Adafruit_AM2315 am2315;
+/**Red lead to 3.0V
+ * Black lead to Ground
+ * White lead to i2c clock
+ * Yellow lead to i2c data
+ */
 
 //blinky for receipt of message- useful to headless range testing
 #define LED 13
@@ -31,9 +40,9 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  while (!Serial) {
+  /**while (!Serial) {
     delay(1);
-  }
+  } */
   
   Serial.println("Feather LoRa RX Test");
 
@@ -54,6 +63,11 @@ void setup() {
     while (1);
   }
   Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
+
+  if (!am2315.begin()) {
+    Serial.println("am2315 sensor not found");
+    while(1);
+  }
 
   //Transmitter power
   rf95.setTxPower(23, false);
@@ -92,7 +106,7 @@ void loop() {
         if (datum == "Acknowledged") {
           //Acknowledgement of ID- uncomment delay if range testing for better LED visibility
           Serial.println("Received acknowledgement, no reply");
-          //delay(500);
+          delay(500);
           digitalWrite(LED, LOW);
         }
         else if (datum == "Info") {
@@ -179,3 +193,5 @@ String getValue(String data, char separator, int index)
 
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
+
+
