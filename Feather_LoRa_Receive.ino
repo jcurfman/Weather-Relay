@@ -107,7 +107,6 @@ void loop() {
           //Acknowledgement of ID- uncomment delay if range testing for better LED visibility
           Serial.println("Received acknowledgement, no reply");
           delay(500);
-          digitalWrite(LED, LOW);
         }
         else if (datum == "Info") {
           //Dummy data requested. Generate and send.
@@ -119,11 +118,29 @@ void loop() {
           rf95.send((uint8_t *) message, sizeof(message));
           rf95.waitPacketSent();
           Serial.println("Sent data reply");
-          digitalWrite(LED, LOW);
+        }
+        else if (datum == "Hum") {
+          float temp=am2315.readHumidity();
+          Serial.println(temp);
+          sprintf(message, "%8x,Hum,%d", idNum, temp);
+          Serial.println(message);
+          rf95.send((uint8_t *) message, sizeof(message));
+          rf95.waitPacketSent();
+          Serial.println("Sent data reply");
+        }
+        else if (datum == "Temp") {
+          float temp=am2315.readTemperature();
+          Serial.println(temp);
+          sprintf(message, "%8x,Temp,%d", idNum, temp);
+          Serial.println(message);
+          rf95.send((uint8_t *) message, sizeof(message));
+          rf95.waitPacketSent();
+          Serial.println("Sent data reply");
         }
         else {
           Serial.println("Unhandled Exception");
         }
+        digitalWrite(LED, LOW);
       }
       else if (recvID == "Request ID") {
         //Initial ID Request
