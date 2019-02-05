@@ -4,6 +4,8 @@
  */
 
 #include <SPI.h>
+#include <Wire.h>
+#include "RTClib.h"
 #include <RH_RF95.h>
 
 //Radio setup for Feather M0
@@ -13,6 +15,9 @@
 
 //Operational frequency- must match for network as well as unit capabilities
 #define RF95_FREQ 915.0
+
+//Real time clock
+RTC_PCF8523 rtc;
 
 //Radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
@@ -47,6 +52,11 @@ void setup() {
   digitalWrite(RFM95_RST, HIGH);
   Serial.begin(115200);
   delay(100);
+  
+  while (!Serial) {
+    delay(1);
+  } 
+  
   Serial.println("Feather LoRa TX Test!");
 
   //reset radio
@@ -54,6 +64,21 @@ void setup() {
   delay(10);
   digitalWrite(RFM95_RST, HIGH);
   delay(10);
+
+  //Setup RTC
+  if (! rtc.begin()) {
+    Serial.println("Could not find RTC");
+    while (1);
+  }
+  if (! rtc.initialized()) {
+    Serial.println("The RTC was NOT running. Replace battery");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+  DateTime now = rtc.now();
+  Serial.print("RTC running. Current Time is ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(":");
+  Serial.println(now.minute(), DEC);
 
   //Setup Radio parameters
   while (!rf95.init()) {
@@ -72,7 +97,8 @@ void setup() {
 int16_t packetnum = 0; //packet counter
 
 void loop() {
-  delay(1000);
+  DateTime now = rtc.now();
+  delay(100);
   Serial.println("Operating");
   if (haveStation == false) {
     //Transmit ID Request in order to find node
@@ -122,7 +148,7 @@ void loop() {
     Serial.println("Sent a reply"); */
     
     //Request dummy data
-    sprintf(message, "%s,Info", blah);
+    sprintf(message, "%s,%d,Info", blah, now.unixtime());
     Serial.println(message);
     rf95.send((uint8_t *) message, sizeof(message));
     rf95.waitPacketSent();
@@ -141,9 +167,11 @@ void loop() {
         String returnMessage = (char*)buf;
         String recvID = getValue(returnMessage, ',', 0);
         Serial.println(recvID);
-        String info = getValue(returnMessage, ',', 1);
+        String timing = getValue(returnMessage, ',', 1);
+        Serial.println(timing);
+        String info = getValue(returnMessage, ',', 2);
         Serial.println(info);
-        String datum = getValue(returnMessage, ',', 2);
+        String datum = getValue(returnMessage, ',', 3);
         Serial.println(datum);
 
         Station alpha(recvID); //HAVING PROBLEMS WITH CLASS SETUP HERE VERSUS EARLIER

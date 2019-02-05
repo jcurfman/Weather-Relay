@@ -2,6 +2,8 @@
 //Partially based off of several code examples online
 
 #include <SPI.h>
+#include <Wire.h>
+#include "RTClib.h"
 #include <RH_RF95.h>
 #include <Adafruit_AM2315.h>
 
@@ -12,6 +14,9 @@
 
 //Operation frequency- must match for network as well as unit capabilities
 #define RF95_FREQ 915.0
+
+//RTC
+RTC_PCF8523 rtc;
 
 //Radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
@@ -31,6 +36,7 @@ volatile uint32_t idNum;
 char message[50];
 String bleh;
 String ident;
+String oldTiming;
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -40,13 +46,13 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  /**while (!Serial) {
+  while (!Serial) {
     delay(1);
-  } */
+  } 
   
   Serial.println("Feather LoRa RX Test");
 
-  //reset
+  //reset radio
   digitalWrite(RFM95_RST, LOW);
   delay(10);
   digitalWrite(RFM95_RST, HIGH);
@@ -58,16 +64,33 @@ void setup() {
   }
   Serial.println("LoRa radio init OK");
 
+  //Setup RTC
+  if (! rtc.begin()) {
+    Serial.println("Could not find RTC");
+    while (1);
+  }
+  if (! rtc.initialized()) {
+    //If RTC not running, make statement and set the RTC to the date and time this
+    //sketch was compiled
+    Serial.println("The RTC was NOT running. Replace battery");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  } 
+  DateTime now = rtc.now();
+  Serial.print("RTC running. Current Time is ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(":");
+  Serial.println(now.minute(), DEC); 
+
   if (!rf95.setFrequency(RF95_FREQ)) {
     Serial.println("setFrequency failed");
     while (1);
   }
   Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
 
-  if (!am2315.begin()) {
+  /** if (!am2315.begin()) {
     Serial.println("am2315 sensor not found");
     while(1);
-  }
+  } */
 
   //Transmitter power
   rf95.setTxPower(23, false);
@@ -79,6 +102,7 @@ void setup() {
 }
 
 void loop() {
+  DateTime now = rtc.now();
   digitalWrite(LED, LOW);
   if (rf95.available()) {
     //If radio is operational
@@ -95,7 +119,9 @@ void loop() {
       bleh = (char*)buf;
       String recvID = getValue(bleh, ',', 0);
       Serial.println(recvID);
-      String datum = getValue(bleh, ',', 1);
+      String timing = getValue(bleh, ',', 1);
+      Serial.println(timing);
+      String datum = getValue(bleh, ',', 2);
       Serial.println(datum);
       
       //Is message for me?
@@ -111,9 +137,8 @@ void loop() {
         else if (datum == "Info") {
           //Dummy data requested. Generate and send.
           int hehehe = random(40,1200);
-          float randData = hehehe / 10.0;
-          Serial.println(randData);
-          sprintf(message, "%8x,Info,%d", idNum, hehehe);
+          Serial.println(hehehe);
+          sprintf(message, "%8x,%d,Info,%d", idNum, now.unixtime(), hehehe);
           Serial.println(message);
           rf95.send((uint8_t *) message, sizeof(message));
           rf95.waitPacketSent();
@@ -122,7 +147,7 @@ void loop() {
         else if (datum == "Hum") {
           float temp=am2315.readHumidity();
           Serial.println(temp);
-          sprintf(message, "%8x,Hum,%d", idNum, temp);
+          sprintf(message, "%8x,%d,Hum,%d", idNum, now.unixtime(), temp);
           Serial.println(message);
           rf95.send((uint8_t *) message, sizeof(message));
           rf95.waitPacketSent();
@@ -131,7 +156,7 @@ void loop() {
         else if (datum == "Temp") {
           float temp=am2315.readTemperature();
           Serial.println(temp);
-          sprintf(message, "%8x,Temp,%d", idNum, temp);
+          sprintf(message, "%8x,%d,Temp,%d", idNum, now.unixtime(), temp);
           Serial.println(message);
           rf95.send((uint8_t *) message, sizeof(message));
           rf95.waitPacketSent();
@@ -152,13 +177,20 @@ void loop() {
         digitalWrite(LED, LOW);
       }
       else {
-        //If message is for another station, rebroadcast once. 
-        int waitTime = random(100, 2000);
-        delay(waitTime);
-        rf95.send(buf, sizeof(buf));
-        rf95.waitPacketSent();
-        Serial.print("Forwarded message after delay of "); Serial.print(waitTime); Serial.println("ms");
-        digitalWrite(LED, LOW);
+        //If message is new and for another station, rebroadcast once.
+        if (timing == oldTiming) {
+          //Wait between 0.1 and 1 seconds to see if another station rebroadcasts first. 
+          int waitTime = random(100, 1000);
+          delay(waitTime);
+          rf95.send(buf, sizeof(buf));
+          rf95.waitPacketSent();
+          Serial.print("Forwarded message after delay of "); Serial.print(waitTime); Serial.println("ms");
+          digitalWrite(LED, LOW);
+          oldTiming = timing;
+        }
+        else {
+          Serial.println("Already retransmitted. Do nothing.");
+        }
       }
     }
   }
