@@ -118,13 +118,19 @@ void loop() {
     if (rf95.waitAvailableTimeout(1000)) {
       //Should be reply message?
       if (rf95.recv(buf, &len)) {
-        //Serial.print("Got reply: ");
-        //Serial.println((char*)buf);
-        Serial.print("RSSI: ");
-        Serial.println(rf95.lastRssi(), DEC);
-
-        stationId = (char*)buf;
+        Serial.print("Got reply: ");
+        Serial.println((char*)buf);
+        Serial.print("RSSI: "); Serial.println(rf95.lastRssi(), DEC);
+        
+        String recv = (char*)buf;
+        stationId = getValue(recv, ',', 0);
         Serial.println(stationId);
+        String timing = getValue(recv, ',', 1);
+        Serial.println(timing);
+        String info = getValue(recv, ',', 2);
+        Serial.println(info);
+        String datum = getValue(recv, ',', 3);
+        Serial.println(datum);
         
         haveStation = true;
         Station alpha(stationId); //HAVING PROBLEMS WITH CLASS SETUP HERE VERSUS LATER
@@ -140,12 +146,8 @@ void loop() {
     int str_len = stationId.length() + 1;
     char blah[str_len];
     stationId.toCharArray(blah, str_len);
-    /**sprintf(message, "%s,Acknowledged", blah);
-    Serial.println(message);
-
-    rf95.send((uint8_t *) message, sizeof(message));
-    rf95.waitPacketSent();
-    Serial.println("Sent a reply"); */
+    Serial.println(blah);
+    Serial.println("Blah");
     
     //Request dummy data
     sprintf(message, "%s,%d,Info", blah, now.unixtime());

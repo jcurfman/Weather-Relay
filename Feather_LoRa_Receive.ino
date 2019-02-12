@@ -2,6 +2,7 @@
 //Partially based off of several code examples online
 
 #include <SPI.h>
+#include <SD.h>
 #include <Wire.h>
 #include "RTClib.h"
 #include <RH_RF95.h>
@@ -14,6 +15,12 @@
 
 //Operation frequency- must match for network as well as unit capabilities
 #define RF95_FREQ 915.0
+
+// SD card library variables
+Sd2Card card;
+SdVolume volume;
+SdFile root;
+const int chipSelect = 10;
 
 //RTC
 RTC_PCF8523 rtc;
@@ -46,9 +53,9 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  while (!Serial) {
+  /**while (!Serial) {
     delay(1);
-  } 
+  } */
   
   Serial.println("Feather LoRa RX Test");
 
@@ -87,10 +94,10 @@ void setup() {
   }
   Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
 
-  /** if (!am2315.begin()) {
+  if (!am2315.begin()) {
     Serial.println("am2315 sensor not found");
-    while(1);
-  } */
+    //while(1);
+  }
 
   //Transmitter power
   rf95.setTxPower(23, false);
@@ -138,29 +145,17 @@ void loop() {
           //Dummy data requested. Generate and send.
           int hehehe = random(40,1200);
           Serial.println(hehehe);
-          sprintf(message, "%8x,%d,Info,%d", idNum, now.unixtime(), hehehe);
-          Serial.println(message);
-          rf95.send((uint8_t *) message, sizeof(message));
-          rf95.waitPacketSent();
-          Serial.println("Sent data reply");
+          transmit(datum, hehehe);
         }
         else if (datum == "Hum") {
-          float temp=am2315.readHumidity();
-          Serial.println(temp);
-          sprintf(message, "%8x,%d,Hum,%d", idNum, now.unixtime(), temp);
-          Serial.println(message);
-          rf95.send((uint8_t *) message, sizeof(message));
-          rf95.waitPacketSent();
-          Serial.println("Sent data reply");
+          float humid=am2315.readHumidity();
+          Serial.println(humid);
+          transmit(datum, humid);
         }
         else if (datum == "Temp") {
           float temp=am2315.readTemperature();
           Serial.println(temp);
-          sprintf(message, "%8x,%d,Temp,%d", idNum, now.unixtime(), temp);
-          Serial.println(message);
-          rf95.send((uint8_t *) message, sizeof(message));
-          rf95.waitPacketSent();
-          Serial.println("Sent data reply");
+          transmit(datum, temp);
         }
         else {
           Serial.println("Unhandled Exception");
@@ -170,10 +165,7 @@ void loop() {
       else if (recvID == "Request ID") {
         //Initial ID Request
         Serial.println("Request for ID received");
-        sprintf(message, "%8x", idNum);
-        rf95.send((uint8_t *) message, sizeof(message));
-        rf95.waitPacketSent();
-        Serial.println("Sent a reply");
+        transmit(recvID, 42);
         digitalWrite(LED, LOW);
       }
       else {
@@ -196,6 +188,21 @@ void loop() {
   }
 }
 
+void transmit(String type, int datum) {
+  DateTime now = rtc.now();
+  //String to char is a PITA- done for sprintf function
+  int str_len = type.length() + 1;
+  char newType[str_len];
+  type.toCharArray(newType, str_len);
+
+  //Assembles and sends message
+  sprintf(message, "%8x,%d,%s,%d", idNum, now.unixtime(), newType, datum);
+  Serial.println(message);
+  rf95.send((uint8_t *) message, sizeof(message));
+  rf95.waitPacketSent();
+  Serial.println("Sent reply.");
+}
+
 void chipId(int option) {
   //Assembles the SAMD processor chip ID value
   volatile uint32_t val1, val2, val3, val4;
@@ -209,14 +216,13 @@ void chipId(int option) {
   val4 = *ptr;
 
   if (option == 1) {
-    //Prints full processor ID OR assigns end of value to String ident.
+    //Prints full processor ID if uncomment bits OR assigns end of value to String ident.
     //Serial.print("chip id: 0x");
     char buf[33];
     char bleh[12];
     //sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
     sprintf(bleh, "%8x", val4);
     //Serial.println(buf); 
-    //Serial.println(bleh);
     ident = bleh;
   }
   else if (option == 2) {
@@ -225,13 +231,12 @@ void chipId(int option) {
   }
 }
 
-String getValue(String data, char separator, int index)
-{
-  
+String getValue(String data, char separator, int index) {
+  //Takes in a string and divides it at each seperator value. 
+  //Index denotes which divided section to take, from 0 to n.
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length()-1;
-
   for(int i=0; i<=maxIndex && found<=index; i++){
     if(data.charAt(i)==separator || i==maxIndex){
         found++;
@@ -239,8 +244,5 @@ String getValue(String data, char separator, int index)
         strIndex[1] = (i == maxIndex) ? i+1 : i;
     }
   }
-
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
-
-
