@@ -1,16 +1,18 @@
 /**Feather M0 w/ LoRa
  * Designed as basis for network hub
- * Test revision 3- object iteration?
+ * Uses object iteration for tracking of station data
  */
 
 //Currently requires the number of stations nodes in use- hopefully temporary
 const int numStations = 1;
 
-//Design a class for each station's information- work in progress
+//Design a class for each station's information- work in progress as sensors are implemented.
 class Station {
   //Class member variables
   String identifier; //The identifying string for each station
   int randData; //Dummy datapoint for now
+  float humid; //Humidity
+  float tempE; //External Temperature
 
   //Constructor
   public: Station() {
@@ -24,6 +26,14 @@ class Station {
     //Adds a dummy datapoint
     randData = datum; 
   }
+  void addHum(float datum) {
+    //Adds a humidity value
+    humid = datum;
+  }
+  void addTempE(float datum) {
+    //Adds an external temperature value
+    tempE = datum;
+  }
 
   //Data return functions
   String ident() {
@@ -31,6 +41,12 @@ class Station {
   }
   float datum() {
     return randData;
+  }
+  float reHum() {
+    return humid;
+  }
+  float reTempE() {
+    return tempE;
   }
 };
 
