@@ -20,7 +20,7 @@
 Sd2Card card;
 SdVolume volume;
 SdFile root;
-const int chipSelect = 10;
+const int SD_CS = 10;
 
 //RTC
 RTC_PCF8523 rtc;
@@ -53,11 +53,28 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  /**while (!Serial) {
+  while (!Serial) {
     delay(1);
-  } */
+  } 
   
   Serial.println("Feather LoRa RX Test");
+
+  //SD setup
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(RFM95_CS, HIGH); //Deselect LoRa radio for SD function.
+  digitalWrite(SD_CS, HIGH);
+  Serial.print("\nInitializing SD card...");
+  if (! card.init(SPI_HALF_SPEED, SD_CS)) {
+    Serial.println("initialization failed.");
+  }
+  else {
+    Serial.println("Card present.");
+    if (!volume.init(card)) {
+      Serial.println("Could not find FAT32 partition. \nPlease properly format the card.");
+    }
+  }
+  digitalWrite(SD_CS, LOW);
+  digitalWrite(RFM95_CS, LOW); //Switch back to radio after verification of card.
 
   //reset radio
   digitalWrite(RFM95_RST, LOW);
@@ -109,6 +126,7 @@ void setup() {
 }
 
 void loop() {
+  //logging();
   DateTime now = rtc.now();
   digitalWrite(LED, LOW);
   if (rf95.available()) {
@@ -246,3 +264,30 @@ String getValue(String data, char separator, int index) {
   }
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
+
+void logging() {
+  //Assemble instance data
+  String dataLog = "";
+  DateTime now = rtc.now();
+  dataLog += String(idNum);
+  dataLog += ",";
+  dataLog += String(now.unixtime());
+
+  digitalWrite(RFM95_CS, HIGH); //Deselect LoRa radio for SD function.
+  digitalWrite(SD_CS, HIGH);
+
+  //Open or create a file
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  if (dataFile) {
+    dataFile.println(dataLog);
+    dataFile.close();
+    Serial.println("Saved to SD");
+  }
+  else {
+    Serial.println("Error opening datalog.txt");
+  }
+
+  digitalWrite(RFM95_CS, LOW); //Re-enable radio
+  digitalWrite(SD_CS, LOW);
+}
+
