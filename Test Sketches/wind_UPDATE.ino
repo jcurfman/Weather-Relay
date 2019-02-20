@@ -31,12 +31,13 @@ void loop() {
   Serial.print("Rotations: "); Serial.println(Rotations);
   //noInterrupts();
 
-  WindSpeed = Rotations * 2.4;
+  //WindSpeed = Rotations * 2.4;
+  float WSpeed = windSpeed();
   
   sensorValue = analogRead(vanePin);
   float voltage = sensorValue * (5.0 / 4096.0);
   val = digitalRead(anemPin);
-  Serial.print("Windspeed: "); Serial.println(WindSpeed);
+  Serial.print("Windspeed: "); Serial.println(WSpeed);
   Serial.println(windClicks);
   WindDirection = windVane();
   Serial.print("Wind Direction: "); Serial.println(WindDirection);
