@@ -9,22 +9,26 @@ volatile unsigned long Rotations; // cup rotation counter used in interrupt rout
 volatile unsigned long ContactBounceTime; // Timer to avoid contact bounce in interrupt routine
 float WindSpeed; // speed in miles per hour 
 int WindDirection; //in degrees
+volatile byte windClicks;
+volatile long lastWindInt;
 
 void setup() {
   Serial.begin(9600);
   pinMode(anemPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(anemPin), isr_rotation, RISING);
+  //attachInterrupt(digitalPinToInterrupt(anemPin), isr_rotation, RISING);
+  attachInterrupt(digitalPinToInterrupt(anemPin), windSpeedInt, FALLING);
   delay(1000);
   Serial.println("Setup finished");
+  interrupts();
 }
 
 void loop() {
   Rotations = 0; // Set Rotations count to 0 ready for calculations 
 
-  interrupts();
+  //interrupts();
   //delay (1000);
   Serial.print("Rotations: "); Serial.println(Rotations);
-  noInterrupts();
+  //noInterrupts();
 
   WindSpeed = Rotations * 2.4;
   
@@ -32,7 +36,7 @@ void loop() {
   float voltage = sensorValue * (5.0 / 4096.0);
   val = digitalRead(anemPin);
   Serial.print("Windspeed: "); Serial.println(WindSpeed);
-  Serial.println(val);
+  Serial.println(windClicks);
   WindDirection = windVane();
   Serial.print("Wind Direction: "); Serial.println(WindDirection);
   Serial.print("blah: "); Serial.println(blah);
@@ -42,6 +46,15 @@ void loop() {
 
 void isr_rotation () { 
     Rotations++;
+}
+
+void windSpeedInt() {
+  //Activated by a reed switch, attached to pin 11
+  if (millis() - lastWindInt > 10) {
+    //Debouncing the switch
+    lastWindInt = millis(); //current time
+    windClicks++; //1.492MPH for each click per second
+  }
 }
 
  int windVane() {
