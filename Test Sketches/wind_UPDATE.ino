@@ -9,8 +9,9 @@ volatile unsigned long Rotations; // cup rotation counter used in interrupt rout
 volatile unsigned long ContactBounceTime; // Timer to avoid contact bounce in interrupt routine
 float WindSpeed; // speed in miles per hour 
 int WindDirection; //in degrees
-volatile byte windClicks;
-volatile long lastWindInt;
+volatile byte windClicks = 0;
+volatile long lastWindInt = 0;
+long lastWindCheck = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -55,6 +56,16 @@ void windSpeedInt() {
     lastWindInt = millis(); //current time
     windClicks++; //1.492MPH for each click per second
   }
+}
+
+float windSpeed() {
+  float deltaTime = millis() - lastWindCheck; 
+  deltaTime /= 1000.0; //convert to seconds
+  float windSpeed = (float)windClicks / deltaTime;
+  windClicks = 0;
+  lastWindCheck = 0;
+  windSpeed *= 1.492;
+  return(windSpeed);
 }
 
  int windVane() {
