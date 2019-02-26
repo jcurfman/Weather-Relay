@@ -64,15 +64,15 @@ float windSpeed() {
   //First obtain value of pin
   int rawVal = averageAnalogRead(vanePin);
   float voltage = rawVal * (3.3 / 4096.0); //12 bit ADC on Feather M0
-  Serial.print("Raw: "); Serial.println(rawVal);
-  Serial.print("Voltage: "); Serial.println(voltage);
+  //Serial.print("Raw: "); Serial.println(rawVal);
+  //Serial.print("Voltage: "); Serial.println(voltage);
   int Direction = 0;
   /**
-   * The following likely has little room for error tolerance,
-   * and so should be treated as a proof of concept.
+   * The following has little room for error, and may vary depending on ultimate setup
    * Based on external resistor of 10k Ohms and a ref voltage of 3.3V.
    */
-   /**if (rawVal < 265) return (112);
+   /** Old values, before accounting for potential loss over cord length
+   if (rawVal < 265) return (112);
    if (rawVal < 337) return (67);
    if (rawVal < 375) return (90);
    if (rawVal < 508) return (157);
@@ -88,12 +88,21 @@ float windSpeed() {
    if (rawVal < 3315) return (292);
    if (rawVal < 3551) return (315);
    if (rawVal < 3782) return (270); */
+   
+   if (rawVal < 70) return (247);
+   if (rawVal < 90) return (292);
    if (rawVal < 100) return (270);
+   if (rawVal < 130) return (202);
    if (rawVal < 190) return (225);
+   if (rawVal < 250) return (157);
    if (rawVal < 295) return (180);
+   if (rawVal < 410) return (337);
    if (rawVal < 470) return (315);
+   if (rawVal < 615) return (112);
    if (rawVal < 640) return (135);
+   if (rawVal < 710) return (22);
    if (rawVal < 790) return (0);
+   if (rawVal < 830) return (67);
    if (rawVal < 890) return (45);
    if (rawVal < 1000) return (90);
  }
