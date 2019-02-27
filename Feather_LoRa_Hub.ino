@@ -13,6 +13,9 @@ class Station {
   int randData; //Dummy datapoint for now
   float humid; //Humidity
   float tempE; //External Temperature
+  float presKPA; //Pressure
+  int WindDirec; //Wind Direction, in degrees
+  float WindSpeed; 
 
   //Constructor
   public: Station() {
@@ -34,6 +37,18 @@ class Station {
     //Adds an external temperature value
     tempE = datum;
   }
+  void addPres(float datum) {
+    //Adds a pressure value
+    presKPA = datum;
+  }
+  void addWDir(int datum) {
+    //Adds a wind direction value
+    WindDirec = datum;
+  }
+  void addWSpeed(float datum) {
+    //Adds a wind speed value
+    WindSpeed = datum;
+  }
 
   //Data return functions
   String ident() {
@@ -47,6 +62,15 @@ class Station {
   }
   float reTempE() {
     return tempE;
+  }
+  float rePres() {
+    return presKPA;
+  }
+  int reWDir() {
+    return WindDirec;
+  }
+  float reWSpeed() {
+    return WindSpeed;
   }
 };
 
@@ -222,7 +246,6 @@ void testloop() {
 
 String getValue(String data, char separator, int index)
 {
-  
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length()-1;
@@ -235,10 +258,3 @@ String getValue(String data, char separator, int index)
   }
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
-
-/**char toCharEasy(String input) {
-  int str_len = input.length() + 1;
-  char words[str_len];
-  input.toCharArray(words, str_len);
-  return words;
-}*/
