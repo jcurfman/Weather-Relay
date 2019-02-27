@@ -1,5 +1,6 @@
-//Feather M0 w/ LoRa
-//Partially based off of several code examples online
+/**Feather M0 w/ LoRa
+ *Partially based off of several code examples online
+ */
 
 #include <SPI.h>
 #include <SD.h>
@@ -7,6 +8,7 @@
 #include "RTClib.h"
 #include <RH_RF95.h>
 #include <Adafruit_AM2315.h>
+#include <Adafruit_MPL115A2.h>
 
 //Radio Setup for Feather M0
 #define RFM95_CS 8
@@ -15,6 +17,10 @@
 
 //Operation frequency- must match for network as well as unit capabilities
 #define RF95_FREQ 915.0
+
+//Wind Sensor Setup
+#define vanePin A0
+#define anemPin 11
 
 // SD card library variables
 Sd2Card card;
@@ -36,6 +42,9 @@ Adafruit_AM2315 am2315;
  * Yellow lead to i2c data
  */
 
+//Adafruit MPL115A2 sensor- temp and pressure
+Adafruit_MPL115A2 mpl115a2;
+
 //blinky for receipt of message- useful to headless range testing
 #define LED 13
 
@@ -44,6 +53,9 @@ char message[50];
 String bleh;
 String ident;
 String oldTiming;
+volatile byte windClicks = 0;
+volatile long lastWindInt = 0;
+long lastWindCheck = 0;
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -82,6 +94,10 @@ void setup() {
   digitalWrite(RFM95_RST, HIGH);
   delay(10);
 
+  //Wind Sensor Setup
+  pinMode(anemPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(anemPin), windSpeedInt, FALLING);
+
   while (!rf95.init()) {
     Serial.println("LoRa radio init failed");
     while (1);
@@ -113,8 +129,13 @@ void setup() {
 
   if (!am2315.begin()) {
     Serial.println("am2315 sensor not found");
-    //while(1);
   }
+
+  mpl115a2.begin();
+
+  /**if (!mpl115a2.begin()) {
+    Serial.println("mpl115a2 sensor not found");
+  } */
 
   //Transmitter power
   rf95.setTxPower(23, false);
@@ -123,10 +144,11 @@ void setup() {
   chipId(2);
   chipId(1);
   //Serial.println(ident);
+
+  interrupts(); //enable interrupts 
 }
 
 void loop() {
-  //logging();
   DateTime now = rtc.now();
   digitalWrite(LED, LOW);
   if (rf95.available()) {
@@ -175,6 +197,22 @@ void loop() {
           Serial.println(temp);
           transmit(datum, temp);
         }
+        else if (datum == "Pres") {
+          float presKPA = mpl115a2.getPressure();
+          Serial.println(presKPA);
+          transmit(datum, presKPA);
+          //poll temp on this sensor for potential overheating here?
+        }
+        else if (datum == "WDir") {
+          int WindDirection = windVane();
+          Serial.println(WindDirection);
+          transmit(datum, WindDirection);
+        }
+        else if (datum == "WSpeed") {
+          float WindSpeed = windSpeed();
+          Serial.println(WindSpeed);
+          transmit(datum, WindSpeed);
+        }
         else {
           Serial.println("Unhandled Exception");
         }
@@ -204,6 +242,7 @@ void loop() {
       }
     }
   }
+  //logging()
 }
 
 void transmit(String type, int datum) {
@@ -291,3 +330,60 @@ void logging() {
   digitalWrite(SD_CS, LOW);
 }
 
+void windSpeedInt() {
+  //Activated by a reed switch, attached to pin 11
+  if (millis() - lastWindInt > 10) {
+    //Debouncing the switch
+    lastWindInt = millis(); //current time
+    windClicks++; //1.492MPH for each click per second
+  }
+}
+
+float windSpeed() {
+  float deltaTime = millis() - lastWindCheck; 
+  deltaTime /= 1000.0; //convert to seconds
+  float windSpeed = (float)windClicks / deltaTime;
+  windClicks = 0;
+  lastWindCheck = millis();
+  windSpeed *= 1.492;
+  return(windSpeed);
+}
+
+int windVane() {
+  //First obtain value of pin
+  int rawVal = averageAnalogRead(vanePin);
+  float voltage = rawVal * (3.3 / 4096.0); //12 bit ADC on Feather M0
+  int Direction = 0;
+  /**
+   * The following has little room for error, and may vary depending on ultimate setup.
+   * Maps the wind direction based on 
+   * Based on external resistor of 10k Ohms and a ref voltage of 3.3V.
+   */
+   if (rawVal < 70) return (247);
+   if (rawVal < 90) return (292);
+   if (rawVal < 100) return (270);
+   if (rawVal < 130) return (202);
+   if (rawVal < 190) return (225);
+   if (rawVal < 250) return (157);
+   if (rawVal < 295) return (180);
+   if (rawVal < 410) return (337);
+   if (rawVal < 470) return (315);
+   if (rawVal < 615) return (112);
+   if (rawVal < 640) return (135);
+   if (rawVal < 710) return (22);
+   if (rawVal < 790) return (0);
+   if (rawVal < 830) return (67);
+   if (rawVal < 890) return (45);
+   if (rawVal < 1000) return (90);
+ }
+
+ int averageAnalogRead(int pinToRead) {
+    byte numberOfReadings = 8;
+    unsigned int runningValue = 0;
+
+    for(int x = 0 ; x < numberOfReadings ; x++)
+        runningValue += analogRead(pinToRead);
+        delay(1);
+    runningValue /= numberOfReadings;
+    return(runningValue);  
+}
