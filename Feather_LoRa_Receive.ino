@@ -242,7 +242,11 @@ void loop() {
       }
     }
   }
-  //logging()
+  if (now.second() % 10 == 0) {
+    logging();
+    delay(990);
+    return;
+  }
 }
 
 void transmit(String type, int datum) {
@@ -313,7 +317,11 @@ void logging() {
   dataLog += String(now.unixtime());
 
   digitalWrite(RFM95_CS, HIGH); //Deselect LoRa radio for SD function.
-  digitalWrite(SD_CS, HIGH);
+  //digitalWrite(SD_CS, HIGH);
+
+  if (!SD.begin(SD_CS)) {
+    //Serial.println("SD initialization failed");
+  }
 
   //Open or create a file
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
