@@ -1,9 +1,16 @@
 # Weather-Relay
-Building a weather relay mesh network using LoRa and other low cost technologies
+*Building a weather relay mesh network using LoRa and other low cost technologies*
 
-The RX and TX test files have been deprecated, as has the original "Hub Test" file- while useful, the project has moved past them. They are being kept for posterity.
+### The Components
+An Adafruit Feather M0 with onboard RFM95 LoRa radio forms the backbone of this project. Using omnidirectional antennas, ranges of over 2.5 kilometers have been attained, which is sufficient for this project. An RTC is required for each station node, as well as the hub- the mesh code relies upon it for operation. An Adalogger Featherwing is being used for each of the nodes, combining the RTC with a microSD reader/writer for local data backup.
+
+A variety of additional weather sensors are additionally being implemented. A list will be added at a later date.
+
+### The Code
+The RX and TX test files have both been deprecated, as have a number of other testing files for both sensors and the hub- while useful, the project has moved past them. They are being kept for posterity.
 
 The Hub file is currently designed as the transmitter, and eventually as the master controller for the relay network. The Receive file is being designed as the code for each node. 
+
 
 
 The following resources were found to be helpful during development:
