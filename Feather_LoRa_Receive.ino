@@ -18,9 +18,10 @@
 //Operation frequency- must match for network as well as unit capabilities
 #define RF95_FREQ 915.0
 
-//Wind Sensor Setup
+//Wind and Rain Sensor Setup
 #define vanePin A0
 #define anemPin 11
+#define rainPin 12
 
 // SD card library variables
 Sd2Card card;
@@ -56,6 +57,8 @@ String oldTiming;
 volatile byte windClicks = 0;
 volatile long lastWindInt = 0;
 long lastWindCheck = 0;
+int rainDumps = 0;
+volatile long lastRainInt = 0;
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -94,9 +97,11 @@ void setup() {
   digitalWrite(RFM95_RST, HIGH);
   delay(10);
 
-  //Wind Sensor Setup
+  //Wind and Rain Sensor Setup
   pinMode(anemPin, INPUT_PULLUP);
+  pinMode(rainPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(anemPin), windSpeedInt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(rainPin), rainInt, FALLING);
 
   while (!rf95.init()) {
     Serial.println("LoRa radio init failed");
@@ -212,6 +217,12 @@ void loop() {
           float WindSpeed = windSpeed();
           Serial.println(WindSpeed);
           transmit(datum, WindSpeed);
+        }
+        else if (datum == "Rain") {
+          float rainFall = 0.2794 * rainDumps; //Convert to mm of rainfall
+          //float rainFall = 0.011 * rainDumps; //Convert to inches of rainfall
+          Serial.println(rainFall);
+          transmit(datum, rainFall);
         }
         else {
           Serial.println("Unhandled Exception");
@@ -336,6 +347,15 @@ void logging() {
 
   digitalWrite(RFM95_CS, LOW); //Re-enable radio
   digitalWrite(SD_CS, LOW);
+}
+
+void rainInt() {
+  //Activated by a reed switch, attached to pin 12
+  if (millis() - lastRainInt > 10) {
+    //Debounce the switch
+    lastRainInt = millis(); //current time
+    rainDumps++;
+  }
 }
 
 void windSpeedInt() {
