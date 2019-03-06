@@ -16,6 +16,7 @@ class Station {
   float presKPA; //Pressure
   int WindDirec; //Wind Direction, in degrees
   float WindSpeed; 
+  float rainFall; //rainfall, in mm (can be converted to inches on receiver code)
 
   //Constructor
   public: Station() {
@@ -49,6 +50,10 @@ class Station {
     //Adds a wind speed value
     WindSpeed = datum;
   }
+  void addRain(float datum) {
+    //Adds a rainfall value
+    rainFall = datum;
+  }
 
   //Data return functions
   String ident() {
@@ -71,6 +76,9 @@ class Station {
   }
   float reWSpeed() {
     return WindSpeed;
+  }
+  float reRain() {
+    return rainFall;
   }
 };
 
@@ -103,7 +111,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
   while (!Serial) {
-    delay(1);
+    //delay(1);
   }
 
   Serial.println("Feather LoRa TX Test!");
