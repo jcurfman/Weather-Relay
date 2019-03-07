@@ -17,16 +17,4 @@ The RX and TX test files have both been deprecated, as have a number of other te
 
 The Hub file is currently designed as the transmitter, and eventually as the master controller for the relay network. The Receive file is being designed as the code for each node. 
 
-Additional information about this project may be found at the Hackster.io page linked at the top of the repository.
-
-The following resources were found to be helpful during development:
-
-https://stackoverflow.com/a/23880116
-
-https://stackoverflow.com/a/29673158
-
-https://www.snip2code.com/Snippet/1031839/Arduino-SAMD---Arduino-Zero---Arduino-M0/
-
-http://www.hobbytronics.co.uk/arduino-float-vars
-
-https://github.com/sparkfun/Wimp_Weather_Station
+Additional information about this project may be found at the Hackster.io page linked at the top of the repository, as well as in this repository's wiki section. 
