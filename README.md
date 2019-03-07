@@ -12,6 +12,8 @@ AM2315 | Humidity and Temperature | I2C
 MPL115A2 | Barometric Pressure | I2C
 Sparkfun Weather Meters | Wind Speed, Direction, and Rainfall | Analog/Digital Inputs
 
+Additional information on all of these may be found in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki/Components).
+
 ### The Code
 The RX and TX test files have both been deprecated, as have a number of other testing files for both sensors and the hub- while useful, the project has moved past them. They are being kept for posterity.
 
