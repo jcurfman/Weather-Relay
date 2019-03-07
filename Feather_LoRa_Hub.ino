@@ -229,7 +229,10 @@ void loop() {
         else {
           Serial.println("Receive failed");
         }
-        delay(500);
+
+        //Request station to log data
+        sprintf(message, "%s,%d,Log", StationId, now.unixtime());
+        delay(1000);
       }
     }
   }

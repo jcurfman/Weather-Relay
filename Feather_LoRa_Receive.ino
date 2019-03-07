@@ -224,6 +224,9 @@ void loop() {
           Serial.println(rainFall);
           transmit(datum, rainFall);
         }
+        else if (datum == "Log") {
+          logging();
+        }
         else {
           Serial.println("Unhandled Exception");
         }
@@ -253,11 +256,11 @@ void loop() {
       }
     }
   }
-  if (now.second() % 10 == 0) {
+  /**if (now.second() % 10 == 0) {
     logging();
     delay(990);
     return;
-  }
+  }*/
 }
 
 void transmit(String type, int datum) {
