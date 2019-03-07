@@ -11,6 +11,7 @@ Sensor | Dataset | Interface
 AM2315 | Humidity and Temperature | I2C
 MPL115A2 | Barometric Pressure | I2C
 Sparkfun Weather Meters | Wind Speed, Direction, and Rainfall | Analog/Digital Inputs
+TSL2591 | Luminosity | I2C
 
 Additional information on all of these may be found in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki/Components).
 
