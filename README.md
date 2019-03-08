@@ -20,4 +20,4 @@ The RX and TX test files have both been deprecated, as have a number of other te
 
 The Hub file is currently designed as the transmitter, and eventually as the master controller for the relay network. The Receive file is being designed as the code for each node. 
 
-Additional information about this project may be found at the Hackster.io page linked at the top of the repository, as well as in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki). 
+Additional information about this project may be found at the [Hackster.io](https://www.hackster.io/129087/lora-based-weather-station-a332d9) page linked at the top of the repository, as well as in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki). 
