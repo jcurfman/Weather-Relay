@@ -69,6 +69,7 @@ void setup() {
   delay(100);
 
   while (!Serial) {
+    //Comment this out before standalone operations deployment
     delay(1);
   } 
   
@@ -103,10 +104,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(anemPin), windSpeedInt, FALLING);
   attachInterrupt(digitalPinToInterrupt(rainPin), rainInt, FALLING);
 
-  while (!rf95.init()) {
+  /**while (!rf95.init()) {
     Serial.println("LoRa radio init failed");
     while (1);
-  }
+  }*/
   Serial.println("LoRa radio init OK");
 
   //Setup RTC
@@ -148,12 +149,39 @@ void setup() {
   //Get identity
   chipId(2);
   chipId(1);
-  //Serial.println(ident);
+  Serial.println(ident);
 
   interrupts(); //enable interrupts 
 }
 
 void loop() {
+  //Sensor Testing Loop
+  DateTime now = rtc.now();
+  Serial.println(Time());
+  float pressureKPA = 0, temperatureC = 0;
+  float Temp = am2315.readTemperature();
+  Serial.print("Temp AM2315: "); Serial.println(Temp);
+  delay(10);
+  mpl115a2.getPT(&pressureKPA,&temperatureC);
+  Serial.print("Temp MPL115A2: "); Serial.println(temperatureC, 1);
+  Serial.print("Presssure: "); Serial.println(pressureKPA, 4);
+  delay(10);
+  float Humid = am2315.readHumidity();
+  Serial.print("Humidity: "); Serial.println(am2315.readHumidity());
+  delay(10);
+  int windDirection = windVane();
+  Serial.print("Wind Direction: "); Serial.println(windDirection);
+  float wSpeed = windSpeed();
+  Serial.print("Wind Speed: "); Serial.println(wSpeed);
+  Humid = am2315.readHumidity(); //Experiencing a "Not a Number" bug with the humidity read out to SD. Requires a fix sooner than later.
+  Serial.println(Humid);
+  logging(String(Temp), String(temperatureC), String(pressureKPA), String(am2315.readHumidity()), String(windDirection), String(wSpeed));
+  delay(10);
+  Serial.println("...");
+  delay(1000);
+}
+
+void mainloop() {
   DateTime now = rtc.now();
   digitalWrite(LED, LOW);
   if (rf95.available()) {
@@ -225,7 +253,7 @@ void loop() {
           transmit(datum, rainFall);
         }
         else if (datum == "Log") {
-          logging();
+          logging("hi","bye","huh","blah","bleh","eh");
         }
         else {
           Serial.println("Unhandled Exception");
@@ -261,6 +289,15 @@ void loop() {
     delay(990);
     return;
   }*/
+}
+
+String Time() {
+  DateTime now = rtc.now();
+  String Times;
+  Times += String(now.hour(), DEC); Times += ":";
+  Times += String(now.minute(), DEC); Times += ":";
+  Times += String(now.second(), DEC);
+  return Times;
 }
 
 void transmit(String type, int datum) {
@@ -322,13 +359,26 @@ String getValue(String data, char separator, int index) {
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-void logging() {
-  //Assemble instance data
+void logging(String str1, String str2, String str3, String str4, String str5, String str6) {
+  //Assemble instance data- be sure to comment out whichever timekeeping you don't want.
   String dataLog = "";
   DateTime now = rtc.now();
-  dataLog += String(idNum);
-  dataLog += ",";
-  dataLog += String(now.unixtime());
+  dataLog += String(idNum); dataLog += ",";
+  delay(5);
+  //dataLog += String(now.unixtime()); dataLog += ",";
+  dataLog += Time(); dataLog += ",";
+  delay(5);
+  dataLog += str1; dataLog += ",";
+  delay(5);
+  dataLog += str2; dataLog += ",";
+  delay(5);
+  dataLog += str3; dataLog += ",";
+  delay(5);
+  dataLog += str4; dataLog += ",";
+  delay(5);
+  dataLog += str5; dataLog += ",";
+  delay(5);
+  dataLog += str6;
 
   digitalWrite(RFM95_CS, HIGH); //Deselect LoRa radio for SD function.
   //digitalWrite(SD_CS, HIGH);
@@ -385,6 +435,7 @@ int windVane() {
   int rawVal = averageAnalogRead(vanePin);
   float voltage = rawVal * (3.3 / 4096.0); //12 bit ADC on Feather M0
   int Direction = 0;
+  //Serial.print(voltage); Serial.print("; "); Serial.println(rawVal);
   /**
    * The following has little room for error, and may vary depending on ultimate setup.
    * Maps the wind direction based on 
