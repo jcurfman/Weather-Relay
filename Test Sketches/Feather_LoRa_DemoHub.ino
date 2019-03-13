@@ -186,6 +186,11 @@ void loop() {
     }
   }
   else if (haveStation == true) {
+    while (now.minute()%5 == 0 && now.second() < 31) {
+      Serial.println("Take 30s, Pause for SD Logging.");
+      Serial.println("Takes place every 5 minutes.");
+      delay(1);
+    }
     //Normal operation mode- Start sensor read in
     String id = ident;
     int str_len = id.length() +1;
