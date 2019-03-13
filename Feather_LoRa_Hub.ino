@@ -194,6 +194,10 @@ void loop() {
     haveStation = true;
   }
   else if (haveStation == true) {
+    while (now.minute()%5 == 0 && now.second()<31) {
+      Serial.println("Take 30s, Pause for logging");
+      delay(1);
+    }
     //Normal operating mode- Start sensor read in
     for (auto &item : stations) {
       String id = item.ident();

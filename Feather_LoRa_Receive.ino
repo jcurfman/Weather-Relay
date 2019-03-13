@@ -61,6 +61,14 @@ int rainDumps = 0;
 volatile long lastRainInt = 0;
 long lastIdSent;
 
+//Following variables are kept global in order to ease logging
+float temp;
+float humid;
+float presKPA;
+int windDirection;
+float wSpeed;
+float rainFall;
+
 void setup() {
   pinMode(LED, OUTPUT);
   pinMode(RFM95_RST, OUTPUT);
@@ -208,7 +216,7 @@ void loop() {
       Serial.println(datum);
       
       //Is message for me?
-      if (recvID == ident && timing != oldTiming) { 
+      if (recvID == ident) { // && timing != oldTiming) { 
         Serial.println("Is for me");
 
         //Decide what to do with message
@@ -224,37 +232,37 @@ void loop() {
           transmit(datum, hehehe);
         }
         else if (datum == "Humid") {
-          float humid=am2315.readHumidity();
+          humid=am2315.readHumidity();
           humid *= 100;
           Serial.print("Humidity: "); Serial.println(humid);
           transmit(datum, humid);
         }
         else if (datum == "Temp") {
-          float temp=am2315.readTemperature();
+          temp=am2315.readTemperature();
           temp *= 100;
           Serial.println(temp);
           transmit(datum, temp);
         }
         else if (datum == "Pres") {
-          float presKPA = mpl115a2.getPressure();
+          presKPA = mpl115a2.getPressure();
           presKPA *= 1000;
           Serial.println(presKPA);
           transmit(datum, presKPA);
           //poll temp on this sensor for potential overheating here?
         }
         else if (datum == "WDir") {
-          int WindDirection = windVane();
-          Serial.println(WindDirection);
-          transmit(datum, WindDirection);
+          windDirection = windVane();
+          Serial.println(windDirection);
+          transmit(datum, windDirection);
         }
         else if (datum == "WSpeed") {
-          float WindSpeed = windSpeed();
-          WindSpeed *= 100;
-          Serial.println(WindSpeed);
-          transmit(datum, WindSpeed);
+          wSpeed = windSpeed();
+          wSpeed *= 100;
+          Serial.println(wSpeed);
+          transmit(datum, wSpeed);
         }
         else if (datum == "Rain") {
-          float rainFall = 0.2794 * rainDumps; //Convert to mm of rainfall
+          rainFall = 0.2794 * rainDumps; //Convert to mm of rainfall
           //float rainFall = 0.011 * rainDumps; //Convert to inches of rainfall
           rainFall *= 1000;
           Serial.println(rainFall);
@@ -297,11 +305,11 @@ void loop() {
       }
     }
   }
-  /**if (now.second() % 10 == 0) {
-    logging();
-    delay(990);
-    return;
-  }*/
+  if (now.minute()%5 == 0) {
+    //Log data every 5 minutes. Hub allows 30 seconds to do so- should be plenty
+    logging(String(temp/100), String(presKPA/1000), String(humid/100), String(windDirection), String(wSpeed/100), String(rainFall/1000));
+    Serial.println("Logged to SD");
+  }
 }
 
 String Time() {
