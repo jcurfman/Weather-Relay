@@ -103,6 +103,7 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 bool haveStation = false;
 char message[50];
+char* sensors[] = {"Temp","Humid","Pres","WDir","WSpeed","Rain"};
 
 Station stations[numStations];
 
@@ -114,7 +115,7 @@ void setup() {
     //delay(1);
   }
 
-  Serial.println("Feather LoRa TX Test!");
+  Serial.println("Feather LoRa Hub Test!");
 
   //reset radio
   digitalWrite(RFM95_RST, LOW);
@@ -193,16 +194,67 @@ void loop() {
     haveStation = true;
   }
   else if (haveStation == true) {
-    //Normal operating mode- this is where the sensor read-in will end up
+    //Normal operating mode- Start sensor read in
     for (auto &item : stations) {
       String id = item.ident();
       int str_len = id.length() + 1;
       char StationId[str_len];
       id.toCharArray(StationId, str_len);
-      //char stationId = toCharEasy(item.ident());
+
+      for (auto &info : sensors) {
+        //iterates through Sensor array for all valid onboard sensors
+        Serial.println(info);
+        sprintf(message, "%s,%d,%s", StationId, now.unixtime(), info);
+        Serial.println(message);
+        rf95.send((uint8_t *)message, sizeof(message));
+        rf95.waitPacketSent();
+        Serial.println("Sent");
+
+        //Listen for return message with data
+        uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+        uint8_t len = sizeof(buf);
+        Serial.println("Waiting for reply...");
+        if (rf95.waitAvailableTimeout(1000)) {
+          if (rf95.recv(buf, &len)) {
+            Serial.print("RSSI: "); Serial.println(rf95.lastRssi(), DEC);
+
+            //Parse message into components
+            String returnMessage = (char*)buf;
+            String recvID = getValue(returnMessage, ',', 0);
+            String timing = getValue(returnMessage, ',', 1);
+            String type = getValue(returnMessage, ',', 2);
+            String datum = getValue(returnMessage, ',', 3);
+
+            //Sort data into whatever category it should be in.
+            if (type == "Humid") {
+              float hum = datum.toFloat()/100.0;
+              item.addHum(hum);
+            }
+            else if (type == "Temp") {
+              float temp = datum.toFloat()/100.0;
+              item.addTempE(temp);
+            }
+            else if (type == "Pres") {
+              float pres = datum.toFloat()/1000.0;
+              item.addPres(pres);
+            }
+            else if (type == "WDir") {
+              item.addWDir(datum.toInt());
+            }
+            else if (type == "WSpeed") {
+              float wSpeed = datum.toFloat()/100.0;
+              item.addWSpeed(wSpeed);
+            }
+            else if (type == "Rain") {
+              float rain = datum.toFloat()/1000.0;
+              item.addRain(rain);
+            }
+          }
+        }
+      }
 
       //Request dummy data
-      sprintf(message, "%s,%d,Info", StationId, now.unixtime());
+      /**sprintf(message, "%s,%d,Info", StationId, now.unixtime());
       Serial.println(message);
       rf95.send((uint8_t *)message, sizeof(message));
       rf95.waitPacketSent();
@@ -233,25 +285,8 @@ void loop() {
         //Request station to log data
         sprintf(message, "%s,%d,Log", StationId, now.unixtime());
         delay(1000);
-      }
+      } */
     }
-  }
-}
-
-void testloop() {
-  const char *identList[] = {"aa", "bb", "cc", "dd", "ee", "ff"};
-  for (int i=0; i<numStations; i++) {
-    Serial.print("Number: "); Serial.println(i+1);
-    stations[i].addId(identList[i]);
-    int bleh = random(0,100);
-    stations[i].addData(bleh);
-    Serial.print(i+1); Serial.println(" complete");
-  }
-  for (auto &item : stations) {
-    String identity = item.ident();
-    float datum = item.datum();
-    Serial.println(identity);
-    Serial.println(datum);
   }
 }
 
