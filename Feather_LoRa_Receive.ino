@@ -59,6 +59,7 @@ volatile long lastWindInt = 0;
 long lastWindCheck = 0;
 int rainDumps = 0;
 volatile long lastRainInt = 0;
+long lastIdSent;
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -93,9 +94,9 @@ void setup() {
   digitalWrite(RFM95_CS, LOW); //Switch back to radio after verification of card.
 
   //reset radio
-  digitalWrite(RFM95_RST, LOW);
+  //digitalWrite(RFM95_RST, LOW);
   delay(10);
-  digitalWrite(RFM95_RST, HIGH);
+  //digitalWrite(RFM95_RST, HIGH);
   delay(10);
 
   //Wind and Rain Sensor Setup
@@ -104,10 +105,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(anemPin), windSpeedInt, FALLING);
   attachInterrupt(digitalPinToInterrupt(rainPin), rainInt, FALLING);
 
-  /**while (!rf95.init()) {
+  while (!rf95.init()) {
+    //One radio refuses to initialize with an SD card inserted currently. Might be circuit fluke? Further investigation required.
     Serial.println("LoRa radio init failed");
     while (1);
-  }*/
+  }
   Serial.println("LoRa radio init OK");
 
   //Setup RTC
@@ -140,6 +142,8 @@ void setup() {
   mpl115a2.begin();
 
   /**if (!mpl115a2.begin()) {
+    //Bug- "Could not convert 'mpl115a2.Adafruit_MPL115A2::begin()' from void to bool"
+    //Further research required
     Serial.println("mpl115a2 sensor not found");
   } */
 
@@ -162,20 +166,19 @@ void loop() {
   float Temp = am2315.readTemperature();
   Serial.print("Temp AM2315: "); Serial.println(Temp);
   delay(10);
+  float Humid = am2315.readHumidity();
   mpl115a2.getPT(&pressureKPA,&temperatureC);
   Serial.print("Temp MPL115A2: "); Serial.println(temperatureC, 1);
   Serial.print("Presssure: "); Serial.println(pressureKPA, 4);
   delay(10);
-  float Humid = am2315.readHumidity();
-  Serial.print("Humidity: "); Serial.println(am2315.readHumidity());
+  Humid = am2315.readHumidity();
+  Serial.print("Humidity: "); Serial.println(Humid);
   delay(10);
   int windDirection = windVane();
   Serial.print("Wind Direction: "); Serial.println(windDirection);
   float wSpeed = windSpeed();
   Serial.print("Wind Speed: "); Serial.println(wSpeed);
-  Humid = am2315.readHumidity(); //Experiencing a "Not a Number" bug with the humidity read out to SD. Requires a fix sooner than later.
-  Serial.println(Humid);
-  logging(String(Temp), String(temperatureC), String(pressureKPA), String(am2315.readHumidity()), String(windDirection), String(wSpeed));
+  logging(String(Temp), String(temperatureC), String(pressureKPA), String(Humid), String(windDirection), String(wSpeed));
   delay(10);
   Serial.println("...");
   delay(1000);
@@ -205,7 +208,7 @@ void mainloop() {
       Serial.println(datum);
       
       //Is message for me?
-      if (recvID == ident) { //Remove hardcoded ID when the above crash is solved.
+      if (recvID == ident && timing != oldTiming) { 
         Serial.println("Is for me");
 
         //Decide what to do with message
@@ -261,14 +264,19 @@ void mainloop() {
         digitalWrite(LED, LOW);
       }
       else if (recvID == "Request ID") {
-        //Initial ID Request
-        Serial.println("Request for ID received");
-        transmit(recvID, 42);
-        digitalWrite(LED, LOW);
+        if (millis()-lastIdSent > 60000) {
+          //Initial ID Request
+          int waitTime = random(100, 1000);
+          delay(waitTime);
+          Serial.println("Request for ID received");
+          transmit(recvID, 42);
+          digitalWrite(LED, LOW);
+          lastIdSent = millis();
+        }
       }
       else {
         //If message is new and for another station, rebroadcast once.
-        if (timing == oldTiming) {
+        if (timing != oldTiming) {
           //Wait between 0.1 and 1 seconds to see if another station rebroadcasts first. 
           int waitTime = random(100, 1000);
           delay(waitTime);
@@ -363,7 +371,7 @@ void logging(String str1, String str2, String str3, String str4, String str5, St
   //Assemble instance data- be sure to comment out whichever timekeeping you don't want.
   String dataLog = "";
   DateTime now = rtc.now();
-  dataLog += String(idNum); dataLog += ",";
+  dataLog += String(ident); dataLog += ",";
   delay(5);
   //dataLog += String(now.unixtime()); dataLog += ",";
   dataLog += Time(); dataLog += ",";
@@ -440,6 +448,7 @@ int windVane() {
    * The following has little room for error, and may vary depending on ultimate setup.
    * Maps the wind direction based on 
    * Based on external resistor of 10k Ohms and a ref voltage of 3.3V.
+   * Common error mode: Returning value in 1000's. Not sure why, but always indicator something is disconnected.
    */
    if (rawVal < 70) return (247);
    if (rawVal < 90) return (292);
