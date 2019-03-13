@@ -16,8 +16,8 @@ TSL2591 | Luminosity | I2C
 Additional information on all of these may be found in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki/Components).
 
 ### The Code
-The RX and TX test files have both been deprecated, as have a number of other testing files for both sensors and the hub- while useful, the project has moved past them. They are being kept for posterity.
+The RX and TX test files have both been deprecated, as have a number of other testing files for both sensors and the hub- while useful, the project has moved past them. They files are being kept for posterity. Additionally, a single station simplified version of the Hub code also resides here. This is intended for demonstration purposes only. 
 
-The Hub file is currently designed as the transmitter, and eventually as the master controller for the relay network. The Receive file is being designed as the code for each node. 
+The Hub file is designed to act as the master controller for the relay network. The Receive file is designed as the code for each station, or node.
 
 Additional information about this project may be found at the [Hackster.io](https://www.hackster.io/129087/lora-based-weather-station-a332d9) page linked at the top of the repository, as well as in this repository's [wiki section](https://github.com/jcurfman/Weather-Relay/wiki). 
