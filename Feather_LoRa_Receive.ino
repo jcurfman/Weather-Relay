@@ -69,10 +69,10 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  while (!Serial) {
+  /**while (!Serial) {
     //Comment this out before standalone operations deployment
     delay(1);
-  } 
+  } */
   
   Serial.println("Feather LoRa RX Test");
 
@@ -158,7 +158,7 @@ void setup() {
   interrupts(); //enable interrupts 
 }
 
-void loop() {
+void testloop() {
   //Sensor Testing Loop
   DateTime now = rtc.now();
   Serial.println(Time());
@@ -184,7 +184,7 @@ void loop() {
   delay(1000);
 }
 
-void mainloop() {
+void loop() {
   DateTime now = rtc.now();
   digitalWrite(LED, LOW);
   if (rf95.available()) {
@@ -223,18 +223,21 @@ void mainloop() {
           Serial.println(hehehe);
           transmit(datum, hehehe);
         }
-        else if (datum == "Hum") {
+        else if (datum == "Humid") {
           float humid=am2315.readHumidity();
-          Serial.println(humid);
+          humid *= 100;
+          Serial.print("Humidity: "); Serial.println(humid);
           transmit(datum, humid);
         }
         else if (datum == "Temp") {
           float temp=am2315.readTemperature();
+          temp *= 100;
           Serial.println(temp);
           transmit(datum, temp);
         }
         else if (datum == "Pres") {
           float presKPA = mpl115a2.getPressure();
+          presKPA *= 1000;
           Serial.println(presKPA);
           transmit(datum, presKPA);
           //poll temp on this sensor for potential overheating here?
@@ -246,12 +249,14 @@ void mainloop() {
         }
         else if (datum == "WSpeed") {
           float WindSpeed = windSpeed();
+          WindSpeed *= 100;
           Serial.println(WindSpeed);
           transmit(datum, WindSpeed);
         }
         else if (datum == "Rain") {
           float rainFall = 0.2794 * rainDumps; //Convert to mm of rainfall
           //float rainFall = 0.011 * rainDumps; //Convert to inches of rainfall
+          rainFall *= 1000;
           Serial.println(rainFall);
           transmit(datum, rainFall);
         }
