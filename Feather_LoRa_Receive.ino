@@ -9,6 +9,8 @@
 #include <RH_RF95.h>
 #include <Adafruit_AM2315.h>
 #include <Adafruit_MPL115A2.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_TSL2591.h"
 
 //Radio Setup for Feather M0
 #define RFM95_CS 8
@@ -45,6 +47,9 @@ Adafruit_AM2315 am2315;
 
 //Adafruit MPL115A2 sensor- temp and pressure
 Adafruit_MPL115A2 mpl115a2;
+
+//Adafruit TSL2591 sensor- light
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591);
 
 //blinky for receipt of message- useful to headless range testing
 #define LED 13
@@ -155,6 +160,13 @@ void setup() {
     Serial.println("mpl115a2 sensor not found");
   } */
 
+  //TSL2591 setup
+  if (! tsl.begin()) {
+    Serial.println("tsl2591 sensor not found");
+  }
+  tsl.setGain(TSL2591_GAIN_MED); //25x gain
+  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS); //Medium time to sense light- 100->600ms
+
   //Transmitter power
   rf95.setTxPower(23, false);
 
@@ -194,6 +206,7 @@ void testloop() {
 
 void loop() {
   DateTime now = rtc.now();
+  Serial.println(Time());
   digitalWrite(LED, LOW);
   if (rf95.available()) {
     //If radio is operational
@@ -234,19 +247,19 @@ void loop() {
         else if (datum == "Humid") {
           humid=am2315.readHumidity();
           humid *= 100;
-          Serial.print("Humidity: "); Serial.println(humid);
+          Serial.print("Humidity: "); Serial.println(humid/100);
           transmit(datum, humid);
         }
         else if (datum == "Temp") {
           temp=am2315.readTemperature();
           temp *= 100;
-          Serial.println(temp);
+          Serial.println(temp/100);
           transmit(datum, temp);
         }
         else if (datum == "Pres") {
           presKPA = mpl115a2.getPressure();
           presKPA *= 1000;
-          Serial.println(presKPA);
+          Serial.println(presKPA/1000);
           transmit(datum, presKPA);
           //poll temp on this sensor for potential overheating here?
         }
@@ -258,15 +271,24 @@ void loop() {
         else if (datum == "WSpeed") {
           wSpeed = windSpeed();
           wSpeed *= 100;
-          Serial.println(wSpeed);
+          Serial.println(wSpeed/100);
           transmit(datum, wSpeed);
         }
         else if (datum == "Rain") {
           rainFall = 0.2794 * rainDumps; //Convert to mm of rainfall
           //float rainFall = 0.011 * rainDumps; //Convert to inches of rainfall
           rainFall *= 1000;
-          Serial.println(rainFall);
+          Serial.println(rainFall/1000);
           transmit(datum, rainFall);
+        }
+        else if (datum == "Light") {
+          uint32_t lum = tsl.getFullLuminosity();
+          uint16_t ir, full;
+          ir = lum >> 16;
+          full = lum & 0xFFFF;
+          int lumValue = tsl.calculateLux(full, ir);
+          Serial.println(lumValue);
+          transmit(datum, lumValue);
         }
         else if (datum == "Log") {
           logging("hi","bye","huh","blah","bleh","eh");
@@ -277,7 +299,7 @@ void loop() {
         digitalWrite(LED, LOW);
       }
       else if (recvID == "Request ID") {
-        if (millis()-lastIdSent > 60000) {
+        if (millis()-lastIdSent < 60000) {
           //Initial ID Request
           int waitTime = random(100, 1000);
           delay(waitTime);
@@ -305,7 +327,7 @@ void loop() {
       }
     }
   }
-  if (now.minute()%5 == 0) {
+  if (now.minute()%5 == 0 && now.second() < 2) {
     //Log data every 5 minutes. Hub allows 30 seconds to do so- should be plenty
     logging(String(temp/100), String(presKPA/1000), String(humid/100), String(windDirection), String(wSpeed/100), String(rainFall/1000));
     Serial.println("Logged to SD");
