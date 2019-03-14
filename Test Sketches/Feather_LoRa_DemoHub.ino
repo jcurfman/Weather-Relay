@@ -14,6 +14,7 @@ class Station {
   float presKPA; //Pressure
   int WindDirec; //Wind Direction, in degrees
   float WindSpeed; 
+  int Lum; //Luminosity
   float rainFall; //rainfall, in mm (can be converted to inches on receiver code)
 
   //Constructor
@@ -52,6 +53,10 @@ class Station {
     //Adds a rainfall value
     rainFall = datum;
   }
+  void addLum(int datum) {
+    //Adds luminosity value
+    Lum = datum;
+  }
 
   //Data return functions
   String ident() {
@@ -78,6 +83,9 @@ class Station {
   float reRain() {
     return rainFall;
   }
+  int reLum() {
+    return Lum;
+  }
 };
 
  #include <SPI.h>
@@ -96,12 +104,13 @@ class Station {
  RTC_PCF8523 rtc;
 
  const int numStations = 1;
- char* sensors[] = {"Temp","Humid","Pres","WDir","WSpeed","Rain"};
+ char* sensors[] = {"Temp","Humid","Pres","WDir","WSpeed","Rain","Light"};
 
  bool haveStation = false;
  char message[50];
  int16_t packetnum = 0;
  String ident;
+ long lastLog = 0;
 
 void setup() {
   pinMode(RFM95_RST, OUTPUT);
@@ -186,10 +195,12 @@ void loop() {
     }
   }
   else if (haveStation == true) {
-    while (now.minute()%5 == 0 && now.second() < 31) {
+    if (now.minute()%5 == 0 && millis()-lastLog > 60000) {
       Serial.println("Take 30s, Pause for SD Logging.");
       Serial.println("Takes place every 5 minutes.");
-      delay(1);
+      //Serial.println(Time());
+      delay(30000);
+      lastLog = millis();
     }
     //Normal operation mode- Start sensor read in
     String id = ident;
@@ -197,6 +208,7 @@ void loop() {
     char StationId[str_len];
     id.toCharArray(StationId, str_len);
 
+    Serial.println(Time());
     for (auto &item : sensors) {
       //Serial.println(item);
       transmit(item);
@@ -229,7 +241,7 @@ void loop() {
           else if (type == "Pres") {
             float pres = datum.toFloat()/1000;
             sta.addPres(pres);
-            Serial.print("Pressure (KPA): "); Serial.println(pres);
+            Serial.print("Pressure (kPa): "); Serial.println(pres);
           }
           else if (type == "WDir") {
             sta.addWDir(datum.toInt());
@@ -238,12 +250,16 @@ void loop() {
           else if (type == "WSpeed") {
             float wSpeed = datum.toFloat()/100;
             sta.addWSpeed(wSpeed);
-            Serial.print("Wind Speed: "); Serial.println(wSpeed);
+            Serial.print("Wind Speed (mph): "); Serial.println(wSpeed);
           }
           else if (type == "Rain") {
             float rain = datum.toFloat()/1000;
             sta.addRain(rain);
             Serial.print("Rain (mm): "); Serial.println(rain);
+          }
+          else if (type == "Light") {
+            sta.addLum(datum.toInt());
+            Serial.print("Luminosity (lux): "); Serial.println(datum);
           }
         }
       }
@@ -284,4 +300,13 @@ String getValue(String data, char separator, int index)
     }
   }
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
+String Time() {
+  DateTime now = rtc.now();
+  String Times;
+  Times += String(now.hour(), DEC); Times += ":";
+  Times += String(now.minute(), DEC); Times += ":";
+  Times += String(now.second(), DEC);
+  return Times;
 }
