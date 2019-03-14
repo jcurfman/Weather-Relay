@@ -16,6 +16,7 @@ class Station {
   float presKPA; //Pressure
   int WindDirec; //Wind Direction, in degrees
   float WindSpeed; 
+  int Lum; //Luminosity
   float rainFall; //rainfall, in mm (can be converted to inches on receiver code)
 
   //Constructor
@@ -54,6 +55,10 @@ class Station {
     //Adds a rainfall value
     rainFall = datum;
   }
+  void addLum(int datum) {
+    //Adds luminosity value
+    Lum = datum;
+  }
 
   //Data return functions
   String ident() {
@@ -80,6 +85,9 @@ class Station {
   float reRain() {
     return rainFall;
   }
+  int reLum() {
+    return Lum;
+  }
 };
 
 #include <SPI.h>
@@ -103,7 +111,8 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 bool haveStation = false;
 char message[50];
-char* sensors[] = {"Temp","Humid","Pres","WDir","WSpeed","Rain"};
+char* sensors[] = {"Temp","Humid","Pres","WDir","WSpeed","Rain","Light"};
+long lastLog = 0;
 
 Station stations[numStations];
 
@@ -112,7 +121,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
   while (!Serial) {
-    //delay(1);
+    delay(1);
   }
 
   Serial.println("Feather LoRa Hub Test!");
@@ -126,6 +135,7 @@ void setup() {
   //Setup RTC
   if (! rtc.begin()) {
     Serial.println("Could not find RTC");
+    while (1);
   }
   else {
     if (! rtc.initialized()) {
@@ -194,9 +204,10 @@ void loop() {
     haveStation = true;
   }
   else if (haveStation == true) {
-    while (now.minute()%5 == 0 && now.second()<31) {
+    if (now.minute()%5 == 0 && millis()-lastLog > 60000) {
       Serial.println("Take 30s, Pause for logging");
-      delay(1);
+      delay(30000);
+      lastLog = millis();
     }
     //Normal operating mode- Start sensor read in
     for (auto &item : stations) {
@@ -252,6 +263,9 @@ void loop() {
             else if (type == "Rain") {
               float rain = datum.toFloat()/1000.0;
               item.addRain(rain);
+            }
+            else if (type == "Light") {
+              item.addLum(datum.toInt());
             }
           }
         }
